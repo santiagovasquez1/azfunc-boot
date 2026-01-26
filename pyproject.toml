@@ -1,0 +1,15 @@
+[tool.poetry]
+name = "azfunc-boot"
+version = "0.1.0"
+description = ""
+authors = ["santiago <santivasquez1@gmail.com>"]
+readme = "README.md"
+packages = [{include = "azfunc_boot", from = "src"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+azure-functions = ">=1.21.0,<2.0.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
