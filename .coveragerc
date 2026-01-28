@@ -1,0 +1,5 @@
+[run]
+omit =
+    .python_packages/*
+    ./tests/*
+    ./function_app.py
