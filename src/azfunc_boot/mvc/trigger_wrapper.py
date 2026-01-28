@@ -7,8 +7,8 @@ if TYPE_CHECKING:
 
 class TriggerWrapper:
     """
-    Wrapper para un trigger que intercepta la llamada y devuelve un decorador
-    que envuelve la función con scope.
+    Wrapper for a trigger that intercepts the call and returns a decorator
+    that wraps the function with scope.
     """
 
     def __init__(
@@ -21,15 +21,15 @@ class TriggerWrapper:
 
     def __call__(self, *args: Any, **kwargs: Any) -> TriggerDecorator:
         """
-        Wrapper genérico para cualquier trigger. Intercepta la llamada
-        al trigger y devuelve un decorador que envuelve la función con scope.
+        Generic wrapper for any trigger. Intercepts the trigger call
+        and returns a decorator that wraps the function with scope.
 
         Args:
-            *args: Argumentos posicionales para el trigger.
-            **kwargs: Argumentos con nombre para el trigger.
+            *args: Positional arguments for the trigger.
+            **kwargs: Named arguments for the trigger.
 
         Returns:
-            TriggerDecorator que envuelve la función con scope.
+            TriggerDecorator that wraps the function with scope.
         """
         return TriggerDecorator(
             self._blueprint_wrapper, self._original_trigger, args, kwargs

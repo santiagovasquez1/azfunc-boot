@@ -17,7 +17,7 @@ class ServiceLifetime:
 
 class ServiceRegistration:
     """
-    Estructura para guardar la información de cada servicio registrado.
+    Structure to store information for each registered service.
     """
 
     def __init__(self, factory: Callable[[], Any], lifetime: str):
@@ -28,7 +28,7 @@ class ServiceRegistration:
 class DependencyContainer:
     def __init__(self):
         self._services: Dict[Type, List[ServiceRegistration]] = {}
-        # _singletons guarda las instancias de servicios en modo SINGLETON
+        # _singletons stores instances of services in SINGLETON mode
         self._singletons: Dict[Type, Any] = {}
 
     def add_singleton(
@@ -37,9 +37,9 @@ class DependencyContainer:
         implementation_factory: Optional[Callable[[], Any]] = None,
     ):
         """
-        Registra un servicio con ciclo de vida SINGLETON.
-        Si implementation_factory es None, se asume que service_type
-        es a la vez la "clave" y la implementación.
+        Registers a service with SINGLETON lifetime.
+        If implementation_factory is None, it is assumed that service_type
+        is both the "key" and the implementation.
         """
         self.add_service(
             service_type,
@@ -53,7 +53,7 @@ class DependencyContainer:
         implementation_factory: Optional[Callable[[], Any]] = None,
     ):
         """
-        Registra un servicio con ciclo de vida TRANSIENT.
+        Registers a service with TRANSIENT lifetime.
         """
         self.add_service(
             service_type,
@@ -67,7 +67,7 @@ class DependencyContainer:
         implementation_factory: Optional[Callable[[], Any]] = None,
     ):
         """
-        Registra un servicio con ciclo de vida SCOPED.
+        Registers a service with SCOPED lifetime.
         """
         self.add_service(
             service_type,
@@ -76,7 +76,7 @@ class DependencyContainer:
         )
 
     # ----------------------------------------------------------------------
-    # Método genérico principal para registrar servicios
+    # Main generic method to register services
     # ----------------------------------------------------------------------
     def add_service(
         self,
@@ -85,8 +85,8 @@ class DependencyContainer:
         lifetime: str = ServiceLifetime.SINGLETON,
     ):
         """
-        Registra un servicio en el contenedor.
-        Permite múltiples registros para la misma "clave" (service_type).
+        Registers a service in the container.
+        Allows multiple registrations for the same "key" (service_type).
         """
         if service_type not in self._services:
             self._services[service_type] = []
@@ -96,32 +96,32 @@ class DependencyContainer:
         )
 
     # ----------------------------------------------------------------------
-    # Resolución de servicios
+    # Service resolution
     # ----------------------------------------------------------------------
     def get_service(
         self, service_type: Type, scope: Optional[Dict[Type, Any]] = None
     ) -> Any:
         """
-        Devuelve una instancia de la primera implementación registrada para 'service_type'.
-        Si hay múltiples registros, retorna una lista de todas las implementaciones.
+        Returns an instance of the first registered implementation for 'service_type'.
+        If there are multiple registrations, returns a list of all implementations.
 
-        Si scope es None, intenta obtener el scope del contexto actual (similar a .NET).
+        If scope is None, attempts to get the scope from the current context (similar to .NET).
         """
-        # Si no se proporciona un scope explícito, intenta obtenerlo del contexto
+        # If no explicit scope is provided, attempt to get it from the context
         if scope is None:
             scope = ScopeManager.get_current_scope()
 
         services = self._services.get(service_type)
         if not services or len(services) == 0:
             raise NotFoundError(
-                f"No se ha registrado el servicio para {service_type.__name__}"
+                f"Service has not been registered for {service_type.__name__}"
             )
 
-        # Si solo hay un servicio registrado, devolvemos la instancia
+        # If there is only one registered service, return the instance
         if len(services) == 1:
             return self._resolve_service(services[0], service_type, scope)
 
-        # Si hay múltiples servicios registrados, devolvemos una lista de instancias
+        # If there are multiple registered services, return a list of instances
         return [self._resolve_service(reg, service_type, scope) for reg in services]
 
     def _resolve_service(
@@ -131,84 +131,84 @@ class DependencyContainer:
         scope: Optional[Dict[Type, Any]],
     ) -> Any:
         """
-        Resuelve la instancia de un servicio según su ciclo de vida.
+        Resolves a service instance according to its lifetime.
         """
         lifetime = registration.lifetime
         factory = registration.factory
 
         if lifetime == ServiceLifetime.SINGLETON:
-            # Singleton: se reutiliza la misma instancia
+            # Singleton: reuse the same instance
             if service_type not in self._singletons:
                 self._singletons[service_type] = factory()
             return self._singletons[service_type]
 
         elif lifetime == ServiceLifetime.TRANSIENT:
-            # Transient: cada vez que se solicita se crea una nueva instancia
+            # Transient: create a new instance each time it is requested
             return factory()
 
         elif lifetime == ServiceLifetime.SCOPED:
-            # Scoped: una instancia por "scope" (p. ej. por request)
-            # Si scope es None, intenta obtenerlo del contexto
+            # Scoped: one instance per "scope" (e.g., per request)
+            # If scope is None, attempt to get it from the context
             if scope is None:
                 scope = ScopeManager.get_current_scope()
             if scope is None:
                 raise ValidationError(
-                    "Scoped services requieren un scope explícito. "
-                    "Asegúrate de que el método del controlador esté siendo ejecutado dentro de un scope."
+                    "Scoped services require an explicit scope. "
+                    "Make sure the controller method is being executed within a scope."
                 )
             if service_type not in scope:
                 scope[service_type] = factory()
             return scope[service_type]
 
         else:
-            raise ValidationError(f"Tipo de ciclo de vida desconocido: {lifetime}")
+            raise ValidationError(f"Unknown lifetime type: {lifetime}")
 
     def _create_instance(self, cls: Type) -> Any:
         """
-        Crea una instancia de la clase 'cls' inyectando automáticamente
-        sus dependencias en el constructor. (similar a C# con reflection)
+        Creates an instance of the class 'cls' automatically injecting
+        its dependencies in the constructor. (similar to C# with reflection)
 
-        Este método es totalmente opcional.
-        Si prefieres usar factorías lambda, no es necesario.
+        This method is completely optional.
+        If you prefer to use lambda factories, it is not necessary.
         """
         ctor = getattr(cls, "__init__")
         sig = inspect.signature(ctor)
-        # Excluimos 'self' de los parámetros
+        # Exclude 'self' from parameters
         params = list(sig.parameters.values())[1:]
 
         args = []
         for p in params:
             if p.annotation == inspect._empty:
                 raise ValidationError(
-                    f"El parámetro '{p.name}' del constructor de '{cls.__name__}' "
-                    "no tiene anotación de tipo para poder inyectar automáticamente."
+                    f"Parameter '{p.name}' in constructor of '{cls.__name__}' "
+                    "does not have a type annotation to enable automatic injection."
                 )
 
-            # Detectamos si es un tipo genérico list[Something]
+            # Detect if it is a generic type list[Something]
             origin = typing.get_origin(p.annotation)
             if origin == list:
-                # Ejemplo: list[BaseOcrStrategy]
+                # Example: list[BaseOcrStrategy]
                 item_type = typing.get_args(p.annotation)[0]
                 dependency = self.get_service(item_type)
-                # get_service(item_type) puede retornar una sola instancia o una lista
-                # Normalizamos a una lista
+                # get_service(item_type) can return a single instance or a list
+                # Normalize to a list
                 if not isinstance(dependency, list):
                     dependency = [dependency]
                 args.append(dependency)
             else:
-                # Si no es list, resolvemos normalmente
+                # If it's not a list, resolve normally
                 dependency = self.get_service(p.annotation)
                 args.append(dependency)
 
-        # Creamos la instancia de la clase con los argumentos resueltos
+        # Create the class instance with resolved arguments
         return cls(*args)
 
     # ----------------------------------------------------------------------
-    # Shutdown: Dispose de los singletons que lo implementen
+    # Shutdown: Dispose of singletons that implement it
     # ----------------------------------------------------------------------
     async def shutdown(self):
         """
-        Llama a dispose() en todos los singletons que implementen IDisposable.
+        Calls dispose() on all singletons that implement IDisposable.
         """
         for instance in self._singletons.values():
             if isinstance(instance, IDisposable):

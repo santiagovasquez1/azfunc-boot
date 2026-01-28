@@ -14,29 +14,29 @@ from azure.functions import Blueprint, HttpResponse
 class BaseController(ABC):
     def __init__(self, container: DependencyContainer, bp: Blueprint) -> None:
         """
-        Inicializa el controlador base con el contenedor de dependencias y el blueprint.
+        Initializes the base controller with the dependency container and blueprint.
 
         Args:
-            container: Contenedor de inyección de dependencias.
-            bp: Blueprint de Azure Functions.
+            container: Dependency injection container.
+            bp: Azure Functions Blueprint.
         """
         self.container: DependencyContainer = container
-        # Envuelve el blueprint con ScopedBlueprint para interceptar las llamadas
-        # a cualquier trigger (route, timer_trigger, blob_trigger, etc.)
-        # y aplicar scope automáticamente
+        # Wraps the blueprint with ScopedBlueprint to intercept calls
+        # to any trigger (route, timer_trigger, blob_trigger, etc.)
+        # and automatically apply scope
         self.bp: ScopedBlueprint = ScopedBlueprint(bp, self)
         self.register_routes()
 
     def _json_response(self, data: dict, status_code: int = 200) -> HttpResponse:
         """
-        Crea una respuesta HTTP con JSON.
+        Creates an HTTP response with JSON.
 
         Args:
-            data: Datos a serializar como JSON
-            status_code: Código de estado HTTP (default: 200)
+            data: Data to serialize as JSON
+            status_code: HTTP status code (default: 200)
 
         Returns:
-            HttpResponse con JSON y mimetype correcto
+            HttpResponse with JSON and correct mimetype
         """
         return HttpResponse(
             json.dumps(data),
@@ -48,38 +48,38 @@ class BaseController(ABC):
         self, error_message: str, status_code: int = 500
     ) -> HttpResponse:
         """
-        Crea una respuesta HTTP de error con JSON.
+        Creates an HTTP error response with JSON.
 
         Args:
-            error_message: Mensaje de error
-            status_code: Código de estado HTTP (default: 500)
+            error_message: Error message
+            status_code: HTTP status code (default: 500)
 
         Returns:
-            HttpResponse con error en JSON
+            HttpResponse with error in JSON
         """
         return self._json_response({"error": error_message}, status_code)
 
     @abstractmethod
     def register_routes(self) -> None:
         """
-        Método abstracto que debe ser implementado por las clases hijas
-        para registrar las rutas/triggers del controlador.
+        Abstract method that must be implemented by child classes
+        to register the controller's routes/triggers.
         """
         pass
 
     def _wrap_with_scope(self, method: Callable[..., Any]) -> Callable[..., Any]:
         """
-        Envuelve un método del controlador para crear automáticamente un scope
-        antes de ejecutarlo y limpiarlo después. Similar al comportamiento de
-        IServiceScope en .NET cuando se ejecuta un método de un controller.
+        Wraps a controller method to automatically create a scope
+        before executing it and clean it up afterwards. Similar to the behavior of
+        IServiceScope in .NET when executing a controller method.
 
         Args:
-            method: Método del controlador que será envuelto con scope.
+            method: Controller method that will be wrapped with scope.
 
         Returns:
-            Método envuelto con manejo automático de scope (async o sync según corresponda).
+            Method wrapped with automatic scope handling (async or sync as appropriate).
         """
-        # Detecta si el método es async o sync
+        # Detects if the method is async or sync
         if asyncio.iscoroutinefunction(method):
             return self._create_async_wrapper(method)
         else:
@@ -87,13 +87,13 @@ class BaseController(ABC):
 
     def _create_async_wrapper(self, method: Callable[..., Any]) -> Callable[..., Any]:
         """
-        Crea un wrapper asíncrono que maneja el scope para métodos async.
+        Creates an async wrapper that handles scope for async methods.
 
         Args:
-            method: Método del controlador que será envuelto.
+            method: Controller method that will be wrapped.
 
         Returns:
-            Función async envuelta con manejo de scope.
+            Async function wrapped with scope handling.
         """
 
         @functools.wraps(method)
@@ -111,13 +111,13 @@ class BaseController(ABC):
 
     def _create_sync_wrapper(self, method: Callable[..., Any]) -> Callable[..., Any]:
         """
-        Crea un wrapper síncrono que maneja el scope para métodos sync.
+        Creates a sync wrapper that handles scope for sync methods.
 
         Args:
-            method: Método del controlador que será envuelto.
+            method: Controller method that will be wrapped.
 
         Returns:
-            Función sync envuelta con manejo de scope.
+            Sync function wrapped with scope handling.
         """
 
         @functools.wraps(method)
@@ -126,15 +126,15 @@ class BaseController(ABC):
             ScopeManager.set_current_scope(scope)
             try:
                 result = method(*args, **kwargs)
-                # Si el resultado es una coroutine, el desarrollador debería usar métodos async
+                # If the result is a coroutine, the developer should use async methods
                 if asyncio.iscoroutine(result):
                     logging.warning(
-                        f"El método {method.__name__} es síncrono pero retorna una coroutine. "
-                        "Considere hacer el método async para un mejor manejo del scope."
+                        f"Method {method.__name__} is sync but returns a coroutine. "
+                        "Consider making the method async for better scope handling."
                     )
                 return result
             finally:
-                # Para métodos síncronos, hacemos dispose síncrono
+                # For sync methods, we do sync dispose
                 self._dispose_scope_sync(scope)
                 ScopeManager.clear_current_scope()
 
@@ -143,22 +143,22 @@ class BaseController(ABC):
     @staticmethod
     def _dispose_scope_sync(scope: Dict[Any, Any]) -> None:
         """
-        Versión síncrona de dispose_scope para métodos síncronos.
-        Solo llama a dispose() si es síncrono. Si es async, registra un warning.
+        Synchronous version of dispose_scope for sync methods.
+        Only calls dispose() if it is synchronous. If it is async, logs a warning.
 
         Args:
-            scope: Diccionario que contiene las instancias de servicios scoped.
+            scope: Dictionary containing instances of scoped services.
         """
         for instance in scope.values():
             if isinstance(instance, IDisposable):
                 if hasattr(instance, "dispose") and callable(instance.dispose):
-                    # Para métodos síncronos, solo llamamos dispose síncrono
+                    # For sync methods, we only call sync dispose
                     if not asyncio.iscoroutinefunction(instance.dispose):
                         instance.dispose()
                     else:
-                        # Si es async, no podemos llamarlo desde un contexto síncrono
+                        # If it's async, we cannot call it from a sync context
                         logging.warning(
-                            f"El servicio {type(instance).__name__} tiene un dispose() async "
-                            "pero se está intentando llamar desde un contexto síncrono. "
-                            "Considere usar métodos async en los controladores."
+                            f"Service {type(instance).__name__} has an async dispose() "
+                            "but it is being called from a sync context. "
+                            "Consider using async methods in controllers."
                         )

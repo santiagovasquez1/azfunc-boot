@@ -11,10 +11,10 @@ from azfunc_boot.mvc.controller_discovery import ControllerDiscovery
 
 async def shutdown_container(container: DependencyContainer) -> None:
     """
-    Ejecuta el shutdown del contenedor, llamando a dispose() en todos los singletons.
+    Executes the container shutdown, calling dispose() on all singletons.
 
     Args:
-        container: Contenedor de dependencias a cerrar.
+        container: Dependency container to close.
     """
     if container:
         try:
@@ -26,7 +26,7 @@ async def shutdown_container(container: DependencyContainer) -> None:
 
 class AppFactory:
     """
-    Factory para crear y configurar una Azure Function App con el framework.
+    Factory to create and configure an Azure Function App with the framework.
     """
 
     def __init__(
@@ -40,10 +40,10 @@ class AppFactory:
     ):
         """
         Args:
-            controllers_package: Nombre del paquete donde buscar controllers (default: "controllers").
-            registries_package: Nombre del paquete donde buscar registries (default: "registries").
-            pre_setup_hook: Función opcional a ejecutar después de crear el container pero antes de registrar servicios.
-            post_setup_hook: Función opcional a ejecutar después de registrar todo pero antes de retornar.
+            controllers_package: Name of the package where to search for controllers (default: "controllers").
+            registries_package: Name of the package where to search for registries (default: "registries").
+            pre_setup_hook: Optional function to execute after creating the container but before registering services.
+            post_setup_hook: Optional function to execute after registering everything but before returning.
         """
         self.controllers_package = controllers_package
         self.registries_package = registries_package
@@ -52,24 +52,24 @@ class AppFactory:
 
     def create_app(self) -> Tuple[func.FunctionApp, DependencyContainer]:
         """
-        Crea y configura la Azure Function App con todos los componentes del framework.
+        Creates and configures the Azure Function App with all framework components.
 
         Returns:
-            Tupla con (FunctionApp, DependencyContainer).
+            Tuple with (FunctionApp, DependencyContainer).
 
         Raises:
-            Exception: Si hay algún error durante la configuración.
+            Exception: If there is any error during configuration.
         """
         logging.info("Setting up Azure Function App with framework")
 
-        # 1. Crear FunctionApp y Blueprint
+        # 1. Create FunctionApp and Blueprint
         app = func.FunctionApp()
         blueprint = func.Blueprint()
 
-        # 2. Crear contenedor de dependencias
+        # 2. Create dependency container
         container = DependencyContainer()
 
-        # 3. Pre-setup hook (opcional) - útil para configuraciones específicas del proyecto
+        # 3. Pre-setup hook (optional) - useful for project-specific configurations
         if self.pre_setup_hook:
             try:
                 self.pre_setup_hook(container)
@@ -77,14 +77,14 @@ class AppFactory:
                 logging.error(f"Error in pre_setup_hook: {e}")
                 raise
 
-        # 4. Descubrir y registrar servicios desde registries
+        # 4. Discover and register services from registries
         try:
             RegistryManager.create_registry(container=container)
         except Exception as e:
             logging.error(f"Error discovering registries: {e}")
             raise
 
-        # 5. Descubrir y registrar controllers
+        # 5. Discover and register controllers
         try:
             ControllerDiscovery.create(
                 container=container,
@@ -95,10 +95,10 @@ class AppFactory:
             logging.error(f"Error discovering controllers: {e}")
             raise
 
-        # 6. Registrar blueprint en la app
+        # 6. Register blueprint in the app
         app.register_blueprint(blueprint)
 
-        # 7. Post-setup hook (opcional) - útil para agregar rutas adicionales, middleware, etc.
+        # 7. Post-setup hook (optional) - useful for adding additional routes, middleware, etc.
         if self.post_setup_hook:
             try:
                 self.post_setup_hook(app, container)
@@ -119,16 +119,16 @@ def create_app(
     ] = None,
 ) -> Tuple[func.FunctionApp, DependencyContainer]:
     """
-    Función de conveniencia para crear una Azure Function App con el framework.
+    Convenience function to create an Azure Function App with the framework.
 
     Args:
-        controllers_package: Nombre del paquete donde buscar controllers.
-        registries_package: Nombre del paquete donde buscar registries.
-        pre_setup_hook: Función opcional a ejecutar después de crear el container.
-        post_setup_hook: Función opcional a ejecutar después de registrar todo.
+        controllers_package: Name of the package where to search for controllers.
+        registries_package: Name of the package where to search for registries.
+        pre_setup_hook: Optional function to execute after creating the container.
+        post_setup_hook: Optional function to execute after registering everything.
 
     Returns:
-        Tupla con (FunctionApp, DependencyContainer).
+        Tuple with (FunctionApp, DependencyContainer).
 
     Example:
         ```python

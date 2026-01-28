@@ -9,15 +9,15 @@ from azfunc_boot.registry.base_service_registry import BaseServiceRegistry
 
 class RegistryManager:
     """
-    Manager que descubre y ejecuta automáticamente todos los registries
-    que heredan de BaseServiceRegistry en un paquete especificado.
+    Manager that automatically discovers and executes all registries
+    that inherit from BaseServiceRegistry in a specified package.
     """
 
     def __init__(self, container: DependencyContainer, registries_package: str):
         """
         Args:
-            container: Contenedor de dependencias donde se registrarán los servicios.
-            registries_package: Nombre del paquete donde buscar registries (ej: "registries").
+            container: Dependency container where services will be registered.
+            registries_package: Name of the package where to search for registries (e.g.: "registries").
         """
         self.container = container
         self.registries_package = registries_package
@@ -28,14 +28,14 @@ class RegistryManager:
         container: DependencyContainer, registries_package: str = "registries"
     ) -> "RegistryManager":
         """
-        Factory method para crear y ejecutar el discovery de registries.
+        Factory method to create and execute registry discovery.
 
         Args:
-            container: Contenedor de dependencias.
-            registries_package: Paquete donde buscar registries (default: "registries").
+            container: Dependency container.
+            registries_package: Package where to search for registries (default: "registries").
 
         Returns:
-            RegistryManager con todos los registries descubiertos y ejecutados.
+            RegistryManager with all discovered and executed registries.
         """
         registry = RegistryManager(container, registries_package)
         registry.register_services()
@@ -43,8 +43,8 @@ class RegistryManager:
 
     def register_services(self):
         """
-        Descubre automáticamente todas las clases que heredan de BaseServiceRegistry
-        en el paquete especificado y las instancia para ejecutar sus registros.
+        Automatically discovers all classes that inherit from BaseServiceRegistry
+        in the specified package and instantiates them to execute their registrations.
         """
         package_path = self._load_base_package()
         if package_path is None:
@@ -54,10 +54,10 @@ class RegistryManager:
 
     def _load_base_package(self):
         """
-        Carga y valida el paquete base donde se encuentran los registries.
+        Loads and validates the base package where registries are located.
 
         Returns:
-            Path del paquete si es válido, None en caso contrario.
+            Package path if valid, None otherwise.
         """
         try:
             base_package = importlib.import_module(self.registries_package)
@@ -65,7 +65,7 @@ class RegistryManager:
 
             if package_path is None:
                 logging.warning(
-                    f"El paquete '{self.registries_package}' no es un paquete válido. "
+                    f"Package '{self.registries_package}' is not a valid package. "
                     "Skipping registry discovery."
                 )
                 return None
@@ -73,28 +73,28 @@ class RegistryManager:
             return package_path
         except ImportError as e:
             logging.warning(
-                f"No se pudo importar el paquete '{self.registries_package}': {e}. "
+                f"Could not import package '{self.registries_package}': {e}. "
                 "Skipping registry discovery."
             )
             return None
 
     def _process_all_modules(self, package_path):
         """
-        Itera sobre todos los módulos en el paquete y los procesa.
+        Iterates over all modules in the package and processes them.
 
         Args:
-            package_path: Path del paquete donde buscar módulos.
+            package_path: Package path where to search for modules.
         """
         for _, module_name, is_pkg in pkgutil.iter_modules(package_path):
-            if not is_pkg:  # Solo módulos, no subpaquetes
+            if not is_pkg:  # Only modules, not subpackages
                 self._process_module(module_name)
 
     def _process_module(self, module_name: str):
         """
-        Procesa un módulo individual, importándolo y registrando sus clases de registry.
+        Processes an individual module, importing it and registering its registry classes.
 
         Args:
-            module_name: Nombre del módulo a procesar.
+            module_name: Name of the module to process.
         """
         try:
             full_module_name = f"{self.registries_package}.{module_name}"
@@ -102,19 +102,19 @@ class RegistryManager:
             self._register_registry_classes(module)
         except ImportError as e:
             logging.error(
-                f"No se pudo importar el módulo '{full_module_name}': {e}"
+                f"Could not import module '{full_module_name}': {e}"
             )
         except Exception as e:
             logging.error(
-                f"Error al procesar el módulo '{module_name}': {e}"
+                f"Error processing module '{module_name}': {e}"
             )
 
     def _register_registry_classes(self, module):
         """
-        Busca y registra todas las clases que heredan de BaseServiceRegistry en un módulo.
+        Searches and registers all classes that inherit from BaseServiceRegistry in a module.
 
         Args:
-            module: Módulo donde buscar clases de registry.
+            module: Module where to search for registry classes.
         """
         for _, cls in inspect.getmembers(module, inspect.isclass):
             if self._is_valid_registry_class(cls):
@@ -122,13 +122,13 @@ class RegistryManager:
 
     def _is_valid_registry_class(self, cls) -> bool:
         """
-        Valida si una clase es un registry válido.
+        Validates if a class is a valid registry.
 
         Args:
-            cls: Clase a validar.
+            cls: Class to validate.
 
         Returns:
-            True si la clase es un registry válido, False en caso contrario.
+            True if the class is a valid registry, False otherwise.
         """
         return (
             issubclass(cls, BaseServiceRegistry)
@@ -137,10 +137,10 @@ class RegistryManager:
 
     def _create_registry_instance(self, registry_class):
         """
-        Crea una instancia de registry y la agrega a la lista de servicios registrados.
+        Creates a registry instance and adds it to the list of registered services.
 
         Args:
-            registry_class: Clase de registry a instanciar.
+            registry_class: Registry class to instantiate.
         """
         instance = registry_class(self.container)
         self.registered_services.append(instance)

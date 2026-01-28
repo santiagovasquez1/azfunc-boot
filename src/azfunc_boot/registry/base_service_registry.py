@@ -17,6 +17,6 @@ class BaseServiceRegistry(ABC):
             if getattr(method, "_is_register_service", False):
                 try:
                     method()
-                    logging.info(f"Servicio registrado correctamente: {method.__name__}")
+                    logging.info(f"Service registered successfully: {method.__name__}")
                 except Exception as e:
-                    logging.error(f"Error al registrar el servicio '{method.__name__}': {e}")
+                    logging.error(f"Error registering service '{method.__name__}': {e}")

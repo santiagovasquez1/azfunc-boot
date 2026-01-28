@@ -6,7 +6,7 @@ if TYPE_CHECKING:
 
 class TriggerDecorator:
     """
-    Decorador que envuelve una función con scope antes de pasarla al trigger original.
+    Decorator that wraps a function with scope before passing it to the original trigger.
     """
 
     def __init__(
@@ -23,13 +23,13 @@ class TriggerDecorator:
 
     def __call__(self, func: Callable[..., Any]) -> Callable[..., Any]:
         """
-        Envuelve la función con scope antes de pasarla al trigger original.
+        Wraps the function with scope before passing it to the original trigger.
 
         Args:
-            func: Función del controlador que será envuelta con scope.
+            func: Controller function that will be wrapped with scope.
 
         Returns:
-            Función envuelta que será registrada en el trigger original.
+            Wrapped function that will be registered in the original trigger.
         """
         wrapped_method = self._blueprint_wrapper._controller._wrap_with_scope(func)
         return self._original_trigger(*self._args, **self._kwargs)(wrapped_method)

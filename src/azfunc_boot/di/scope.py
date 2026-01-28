@@ -6,15 +6,15 @@ from azfunc_boot.common.disposable import IDisposable
 
 class ScopeManager:
     """
-    Gestor estático de scopes para servicios scoped.
-    Encapsula toda la funcionalidad relacionada con la gestión de scopes,
-    similar a IServiceScopeFactory en .NET.
+    Static scope manager for scoped services.
+    Encapsulates all functionality related to scope management,
+    similar to IServiceScopeFactory in .NET.
     
-    Esta clase es estática y no necesita ser instanciada.
-    Todos los métodos son estáticos y acceden a una instancia interna privada.
+    This class is static and does not need to be instantiated.
+    All methods are static and access an internal private instance.
     """
 
-    # Context variable para mantener el scope actual (similar a AsyncLocal en .NET)
+    # Context variable to maintain the current scope (similar to AsyncLocal in .NET)
     _current_scope: ContextVar[Optional[Dict[Type, Any]]] = ContextVar(
         "_current_scope", default=None
     )
@@ -22,30 +22,30 @@ class ScopeManager:
     @staticmethod
     def create_scope() -> Dict[Type, Any]:
         """
-        Crea un nuevo scope para servicios scoped.
-        Similar a IServiceScopeFactory.CreateScope() en .NET.
+        Creates a new scope for scoped services.
+        Similar to IServiceScopeFactory.CreateScope() in .NET.
         """
         return {}
 
     @staticmethod
     def set_current_scope(scope: Dict[Type, Any]) -> None:
         """
-        Establece el scope actual en el contexto.
-        Similar a establecer el scope en el AsyncLocal en .NET.
+        Sets the current scope in the context.
+        Similar to setting the scope in AsyncLocal in .NET.
         """
         ScopeManager._current_scope.set(scope)
 
     @staticmethod
     def get_current_scope() -> Optional[Dict[Type, Any]]:
         """
-        Obtiene el scope actual del contexto.
+        Gets the current scope from the context.
         """
         return ScopeManager._current_scope.get()
 
     @staticmethod
     def clear_current_scope() -> None:
         """
-        Limpia el scope actual del contexto.
+        Clears the current scope from the context.
         """
         ScopeManager._current_scope.set(None)
 
@@ -64,7 +64,7 @@ class ScopeManager:
     @staticmethod
     async def dispose_scope(scope: Dict[Type, Any]) -> None:
         """
-        Llama a dispose() en todos los servicios scoped que implementen IDisposable.
+        Calls dispose() on all scoped services that implement IDisposable.
         """
         for instance in scope.values():
             if isinstance(instance, IDisposable):

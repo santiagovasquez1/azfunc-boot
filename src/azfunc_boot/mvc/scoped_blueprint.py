@@ -8,14 +8,14 @@ if TYPE_CHECKING:
 
 class ScopedBlueprint:
     """
-    Wrapper del Blueprint que intercepta las llamadas a cualquier trigger
+    Blueprint wrapper that intercepts calls to any trigger
     (route, timer_trigger, blob_trigger, service_bus_queue_trigger, etc.)
-    y automáticamente envuelve los métodos con scope. Esto permite que los
-    controladores usen self.bp.trigger_name() normalmente sin necesidad de
-    cambios en su código.
+    and automatically wraps methods with scope. This allows controllers
+    to use self.bp.trigger_name() normally without needing to
+    change their code.
     """
 
-    # Métodos del Blueprint que NO son triggers y no deben ser envueltos
+    # Blueprint methods that are NOT triggers and should not be wrapped
     _NON_TRIGGER_METHODS = {
         "register_blueprint",
         "register_functions",
@@ -29,31 +29,31 @@ class ScopedBlueprint:
     def __init__(self, blueprint: Blueprint, controller: "BaseController") -> None:
         self._blueprint: Blueprint = blueprint
         self._controller: "BaseController" = controller
-        # Cache para métodos ya procesados
+        # Cache for already processed methods
         self._cached_methods: Dict[str, Callable[..., Any]] = {}
 
     def __getattr__(self, name: str) -> Any:
         """
-        Intercepta el acceso a cualquier atributo/método del blueprint.
-        Si es un método callable que es un trigger, lo envuelve para aplicar scope automáticamente.
+        Intercepts access to any attribute/method of the blueprint.
+        If it is a callable method that is a trigger, wraps it to automatically apply scope.
 
         Args:
-            name: Nombre del atributo/método a obtener.
+            name: Name of the attribute/method to get.
 
         Returns:
-            El atributo o método envuelto si es un trigger, o el atributo original.
+            The wrapped attribute or method if it is a trigger, or the original attribute.
         """
-        # Si ya lo tenemos en cache, devolverlo
+        # If we already have it in cache, return it
         if name in self._cached_methods:
             return self._cached_methods[name]
 
-        # Obtener el atributo del blueprint original
+        # Get the attribute from the original blueprint
         attr: Any = getattr(self._blueprint, name)
 
-        # Verificar si es un trigger que debe ser envuelto:
-        # 1. Debe ser callable
-        # 2. No debe empezar con "_" (métodos privados)
-        # 3. No debe estar en la lista de métodos que NO son triggers
+        # Verify if it is a trigger that should be wrapped:
+        # 1. Must be callable
+        # 2. Must not start with "_" (private methods)
+        # 3. Must not be in the list of methods that are NOT triggers
         is_trigger: bool = (
             callable(attr)
             and not name.startswith("_")
@@ -61,42 +61,42 @@ class ScopedBlueprint:
         )
 
         if is_trigger:
-            # Crear un wrapper que intercepte la llamada al trigger
+            # Create a wrapper that intercepts the trigger call
             trigger_wrapper: Callable[..., Any] = self._create_trigger_wrapper(attr)
-            # Cachear el método envuelto
+            # Cache the wrapped method
             self._cached_methods[name] = trigger_wrapper
             return trigger_wrapper
 
-        # Si no es un trigger, devolverlo tal cual (atributos, métodos no-trigger, etc.)
+        # If it's not a trigger, return it as is (attributes, non-trigger methods, etc.)
         return attr
 
     def _create_trigger_wrapper(
         self, original_trigger: Callable[..., Any]
     ) -> Callable[..., Any]:
         """
-        Crea un wrapper para un trigger que intercepta la llamada y devuelve un decorador
-        que envuelve la función con scope.
+        Creates a wrapper for a trigger that intercepts the call and returns a decorator
+        that wraps the function with scope.
 
         Args:
-            original_trigger: Método del trigger original del Blueprint.
+            original_trigger: Original trigger method from the Blueprint.
 
         Returns:
-            Función wrapper que devuelve un TriggerDecorator.
+            Wrapper function that returns a TriggerDecorator.
         """
         return TriggerWrapper(self, original_trigger)
 
     def __setattr__(self, name: str, value: Any) -> None:
         """
-        Maneja la asignación de atributos. Los atributos privados se guardan
-        localmente, los demás se delegan al blueprint original.
+        Handles attribute assignment. Private attributes are stored
+        locally, others are delegated to the original blueprint.
 
         Args:
-            name: Nombre del atributo a asignar.
-            value: Valor a asignar.
+            name: Name of the attribute to assign.
+            value: Value to assign.
         """
-        # Maneja nuestros atributos privados
+        # Handle our private attributes
         if name.startswith("_"):
             super().__setattr__(name, value)
         else:
-            # Delega al blueprint original
+            # Delegate to the original blueprint
             setattr(self._blueprint, name, value)
