@@ -35,8 +35,26 @@ class ControllerDiscovery:
         Automatically discovers classes that inherit from BaseController in the specified package
         and registers them dynamically.
         """
+        package_path, package_prefix = self._get_package_info(package)
+        
+        for _, module_name, is_pkg in pkgutil.walk_packages(package_path, package_prefix):
+            full_module_name = self._build_full_module_name(
+                module_name, package, package_prefix
+            )
+            module = self._import_module_safely(full_module_name)
+            
+            if module:
+                self._discover_controllers_in_module(module)
+
+    def _get_package_info(self, package: str) -> tuple[list[str], str]:
+        """
+        Gets package path and prefix by importing the package.
+        Falls back to using the package string as a directory path if import fails.
+        
+        Returns:
+            tuple: (package_path, package_prefix)
+        """
         try:
-            # Import the package first to get its __path__
             package_module = importlib.import_module(package)
             package_path = package_module.__path__
             package_prefix = package_module.__name__ + '.'
@@ -46,29 +64,77 @@ class ControllerDiscovery:
             package_path = [package]
             package_prefix = ''
         
-        for _, module_name, is_pkg in pkgutil.walk_packages(package_path, package_prefix):
-            # Import the module
-            # If package_prefix is empty, module_name does not include the prefix
-            if package_prefix:
-                full_module_name = module_name  # Already includes the full prefix
-            else:
-                full_module_name = f"{package}.{module_name}"
-            
-            try:
-                module = importlib.import_module(full_module_name)
-            except ImportError as e:
-                logging.error(f"Could not import module {full_module_name}: {e}")
-                continue
+        return package_path, package_prefix
 
-            # Inspect classes in the module
-            for name, obj in inspect.getmembers(module, inspect.isclass):
-                if issubclass(obj, BaseController) and obj is not BaseController:
-                    # Register the class if it's not already registered
-                    if obj not in self.registered_controllers:
-                        self.registered_controllers.append(obj)
-                        logging.info(
-                            f"Controller discovered and registered: {obj.__name__}"
-                        )
+    def _build_full_module_name(
+        self, module_name: str, package: str, package_prefix: str
+    ) -> str:
+        """
+        Builds the full module name based on whether package_prefix is available.
+        
+        Args:
+            module_name: The module name from pkgutil.walk_packages
+            package: The original package name
+            package_prefix: The package prefix (empty if package import failed)
+        
+        Returns:
+            str: The full module name
+        """
+        if package_prefix:
+            # Already includes the full prefix
+            return module_name
+        else:
+            return f"{package}.{module_name}"
+
+    def _import_module_safely(self, full_module_name: str):
+        """
+        Safely imports a module, logging errors and returning None on failure.
+        
+        Args:
+            full_module_name: The full name of the module to import
+        
+        Returns:
+            Module object if import succeeds, None otherwise
+        """
+        try:
+            return importlib.import_module(full_module_name)
+        except ImportError as e:
+            logging.error(f"Could not import module {full_module_name}: {e}")
+            return None
+
+    def _discover_controllers_in_module(self, module):
+        """
+        Discovers and registers controller classes in a given module.
+        
+        Args:
+            module: The module object to inspect for controllers
+        """
+        for name, obj in inspect.getmembers(module, inspect.isclass):
+            if self._is_controller_class(obj):
+                self._register_controller_class(obj)
+
+    def _is_controller_class(self, obj) -> bool:
+        """
+        Checks if an object is a controller class (subclass of BaseController but not BaseController itself).
+        
+        Args:
+            obj: The object to check
+        
+        Returns:
+            bool: True if obj is a controller class, False otherwise
+        """
+        return issubclass(obj, BaseController) and obj is not BaseController
+
+    def _register_controller_class(self, controller_cls: Type):
+        """
+        Registers a controller class if it hasn't been registered yet.
+        
+        Args:
+            controller_cls: The controller class to register
+        """
+        if controller_cls not in self.registered_controllers:
+            self.registered_controllers.append(controller_cls)
+            logging.info(f"Controller discovered and registered: {controller_cls.__name__}")
 
     def _register_all_controllers(self):
         """
