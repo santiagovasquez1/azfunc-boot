@@ -1,0 +1,32 @@
+name: gitflow-pr-guard
+
+on:
+  pull_request:
+    branches: [develop, main]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate source branch for GitFlow
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          BASE="${{ github.base_ref }}"
+          HEAD="${{ github.head_ref }}"
+
+          echo "BASE=$BASE"
+          echo "HEAD=$HEAD"
+
+          if [[ "$BASE" == "main" ]]; then
+            [[ "$HEAD" =~ ^release\/.+$ ]] || { echo "Only release/* branches can merge into main"; exit 1; }
+          elif [[ "$BASE" == "develop" ]]; then
+            [[ "$HEAD" =~ ^feature\/.+$ ]] || { echo "Only feature/* branches can merge into develop"; exit 1; }
+          else
+            echo "No GitFlow guard rules defined for base branch: $BASE"
+          fi
+
