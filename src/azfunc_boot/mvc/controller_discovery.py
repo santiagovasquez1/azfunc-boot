@@ -35,9 +35,25 @@ class ControllerDiscovery:
         Descubre automáticamente las clases hijas de BaseController en el paquete especificado
         y las registra dinámicamente.
         """
-        for _, module_name, is_pkg in pkgutil.walk_packages([package]):
+        try:
+            # Importar el paquete primero para obtener su __path__
+            package_module = importlib.import_module(package)
+            package_path = package_module.__path__
+            package_prefix = package_module.__name__ + '.'
+        except ImportError as e:
+            logging.error(f"No se pudo importar el paquete {package}: {e}")
+            # Fallback: intentar usar el string como ruta de directorio
+            package_path = [package]
+            package_prefix = ''
+        
+        for _, module_name, is_pkg in pkgutil.walk_packages(package_path, package_prefix):
             # Importa el módulo
-            full_module_name = f"{package}.{module_name}"
+            # Si package_prefix está vacío, module_name no incluye el prefijo
+            if package_prefix:
+                full_module_name = module_name  # Ya incluye el prefijo completo
+            else:
+                full_module_name = f"{package}.{module_name}"
+            
             try:
                 module = importlib.import_module(full_module_name)
             except ImportError as e:
