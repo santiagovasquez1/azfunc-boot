@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "azfunc-boot"
-version = "0.1.1"
+version = "1.0.0b1"
 description = "A powerful framework for building Azure Functions applications with built-in dependency injection and controller-based architecture"
 authors = ["Santiago Vasquez Gomez <santivasquez1@gmail.com>"]
 readme = "README.md"
